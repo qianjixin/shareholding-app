@@ -27,7 +27,7 @@ class ShareholdingData:
             return (not response_df.empty)
 
     @classmethod
-    def scrape_table(cls, date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
+    def scrape_ccass_table(cls, date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
         date_str = cls.timestamp_to_date_str(date)
         logger.info(f'Scraping data for date={date_str}, stock_code={stock_code}...')
         try:
@@ -42,7 +42,8 @@ class ShareholdingData:
                 shareholding_date_element = driver.find_element(By.ID, 'txtShareholdingDate')
                 driver.execute_script(f'document.getElementById("txtShareholdingDate").setAttribute("value", "{date_str}")')
                 
-                # TODO: Better date validation, because site will auto-correct to business days
+                # TODO: Better date validation
+                # Site will auto-correct values that are Sundays or HK public holidays
                 date_str_actual = shareholding_date_element.get_attribute('value')
                 assert date_str == date_str_actual, 'Invalid date entered.'
 
@@ -91,16 +92,32 @@ class ShareholdingData:
         except BaseException as e:
             logger.error(f'date={date}, stock_code={stock_code}, {e}')
 
-    # TODO: Function to retrieve all shareholding data across a given date range, given a stock_code
     @classmethod
-    def get_stock_shareholding_data(start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
-        pass
+    def get_stock_shareholding_data(cls, start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
+        # Given a stock_code, returns shareholding data for dates between start_date and end_date
+        date_range = pd.date_range(start_date, end_date)
+
+        # 1. Scrape data for dates where data doesn't already exist in the database
+        for date in date_range:
+            if not cls.date_stock_code_exists_in_db(date, stock_code):
+                cls.scrape_ccass_table(date, stock_code)
+
+        # 2. Pull from shareholding database
+        date_str_range_array = [cls.timestamp_to_date_str(date) for date in date_range]
+        date_str_range_array_str = str(tuple(date_str_range_array))
+        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as conn:
+            query = f"""
+            SELECT * FROM {SHAREHOLDING_TABLE_NAME}
+            WHERE date_str in {date_str_range_array_str};
+            """
+            return pd.read_sql(query, conn)
 
 
 if __name__ == '__main__':
-    ShareholdingData.scrape_table(
-        date=pd.Timestamp(year=2022, month=8, day=1),
+    df = ShareholdingData.get_stock_shareholding_data(
+        start_date=pd.Timestamp(year=2022, month=8, day=1),
+        end_date=pd.Timestamp(year=2022, month=8, day=14),
         stock_code=10
     )
 
-logger.info('All done.')
+    logger.info('All done.')

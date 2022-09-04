@@ -8,6 +8,8 @@ services:
       - "selenium:selenium"
     volumes:
       - app-output:/app/output
+    ports:
+      - "8888:8888"
   selenium:
     image: selenium/standalone-chrome
     ports:
