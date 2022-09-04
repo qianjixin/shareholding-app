@@ -1,6 +1,7 @@
 import pandas as pd
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
+import sqlite3
 from utils import *
 from config import *
 
@@ -8,15 +9,25 @@ logger = logging.getLogger(__name__)
 
 class ShareholdingData:
 
-    # Initialise class variable dictionary to store DataFrames from each day of data
-    daily_data_dict = {}
-
     @staticmethod
     def timestamp_to_date_str(timestamp: pd.Timestmap) -> str:
         return timestamp.strftime('%Y/%m/%d')
 
     @classmethod
-    def scrape_shareholding_table(cls, date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
+    def date_stock_code_exists_in_db(cls, date: pd.Timestamp, stock_code: int) -> bool:
+        # Function to return whether the data for the date, stock_code combination already exists in the shareholding table
+        date_str = cls.timestamp_to_date_str(date)
+        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as conn:
+            query = f"""
+            SELECT 1 from {SHAREHOLDING_TABLE_NAME}
+            WHERE (date_str='{date_str}') AND (stock_code={stock_code}')
+            LIMIT 1;
+            """
+            response_df = pd.read_sql(query, conn)
+            return (not response_df.empty)
+
+    @classmethod
+    def scrape_table(cls, date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
         date_str = cls.timestamp_to_date_str(date)
         logger.info(f'Scraping data for date={date_str}, stock_code={stock_code}...')
         try:
@@ -47,7 +58,7 @@ class ShareholdingData:
                 btn_search_element.click()
 
                 # Locate pnlResultNormal (table) element to confirm table has loaded (implicit wait)
-                driver.find_element(By.ID, 'pnlResultNormal')
+                driver.find_element(By.ID, 'pnlResultNor`mal')
 
                 # Use bs4 to extract table as tag
                 soup = BeautifulSoup(driver.page_source, 'html.parser')
@@ -61,21 +72,35 @@ class ShareholdingData:
                 # Read table from the tag as a data frame
                 df = pd.read_html(str(pnl_result_normal_tag))[0]
 
-                # Append date as a column
-                df['date'] = date_str
-                
-                # Append df to cls.daily_data_dict
-                cls.daily_data_dict[date_str] = df
+                # TODO: Process column names
+
+                # Append date_str and stock_code as a columns
+                df['date_str'] = date_str
+                df['stock_code'] = stock_code
+
+                # Write to shareholding database table
+                with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as conn:
+                    df.to_sql(
+                        name=SHAREHOLDING_TABLE_NAME,
+                        con=conn,
+                        if_exists='append',
+                        index=False
+                    )
+                    logger.info(f'Successfully wrote to database for date={date_str}, stock_code={stock_code}')
 
         except BaseException as e:
             logger.error(f'date={date}, stock_code={stock_code}, {e}')
 
+    # TODO: Function to retrieve all shareholding data across a given date range, given a stock_code
+    @classmethod
+    def get_stock_shareholding_data(start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
+        pass
+
 
 if __name__ == '__main__':
-    date = pd.Timestamp(year=2022, month=8, day=1)
-    stock_code = 10
-    ShareholdingData(date, stock_code)
-    print(ShareholdingData.daily_data_dict)
-
+    ShareholdingData.scrape_table(
+        date=pd.Timestamp(year=2022, month=8, day=1),
+        stock_code=10
+    )
 
 logger.info('All done.')

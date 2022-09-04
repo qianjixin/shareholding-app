@@ -20,3 +20,7 @@ IMPLICIT_WAIT_SECONDS = 10
 
 # Constants
 CCASS_SHAREHOLDING_SEARCH_URL = 'https://www3.hkexnews.hk/sdw/search/searchsdw.aspx'
+
+# SQLite3
+SHAREHOLDING_DATA_DB_PATH = '../output/shareholding.db'
+SHAREHOLDING_TABLE_NAME = 'shareholding'
