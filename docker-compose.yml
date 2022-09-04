@@ -3,10 +3,14 @@ services:
   app-dev:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile
     links:
       - "selenium:selenium"
+    volumes:
+      - app-output:/app/output
   selenium:
     image: selenium/standalone-chrome
     ports:
       - "4444:4444"
+volumes:
+  app-output:

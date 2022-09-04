@@ -21,8 +21,7 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-python.python",
-				"GrapeCity.gc-excelviewer"
+				"ms-python.python"
 			]
 		}
 	}

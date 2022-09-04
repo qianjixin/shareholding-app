@@ -6,7 +6,11 @@ services:
       dockerfile: Dockerfile.dev
     links:
       - "selenium:selenium"
+    volumes:
+      - app-dev-output:/app-dev/output
   selenium:
     image: seleniarm/standalone-chromium
     ports:
       - "4444:4444"
+volumes:
+  app-dev-output:
