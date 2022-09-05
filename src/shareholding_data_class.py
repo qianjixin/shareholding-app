@@ -1,4 +1,3 @@
-from lib2to3.pytree import Base
 import pandas as pd
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
@@ -131,15 +130,11 @@ class ShareholdingData:
                 ),
                 con=con
             )
+        # response_df['date_requested'] = pd.to_datetime(response_df['date_requested'])
+        # response_df['date'] = pd.to_datetime(response_df['date'])
         return response_df
     
-
-if __name__ == '__main__':
-    # Testing
-    data = ShareholdingData.pull_shareholding_data(
-        start_date=pd.Timestamp(year=2022, month=2, day=1),
-        end_date=pd.Timestamp(year=2022, month=2, day=14),
-        stock_code=5
-    )
-
-    logger.info('All done.')
+    @classmethod
+    def prepopulate_shareholding_db(cls):
+        for stock_code in PREPOLUATE_STOCK_CODE_RANGE:
+            cls.pull_shareholding_data(PREPOPULATE_START_DATE, PREPOPULATE_END_DATE, stock_code)
