@@ -1,6 +1,7 @@
 import pandas as pd
 import selenium
 from selenium.webdriver.common.by import By
+from selenium.common.exceptions import UnexpectedAlertPresentException
 from bs4 import BeautifulSoup
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
@@ -14,6 +15,8 @@ logger = logging.getLogger(__name__)
 class ShareholdingData:
 
     initialise_shareholding_db()
+
+    unavailable_stock_codes = []
 
     @staticmethod
     def check_date_stock_data_exists_in_db(date: pd.Timestamp, stock_code: int) -> bool:
@@ -29,7 +32,7 @@ class ShareholdingData:
         return not response_df.empty
 
     @staticmethod
-    def check_date_range_stock_data_exists_in_db(date_range: pd.DatetimeIndex, stock_code: int) -> pd.Series:
+    def check_date_range_stock_data_exists_in_db(start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.Series:
         # For a given date_range and stock_code, returns whether each date already exists in the DB
         with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
             response_df = pd.read_sql(
@@ -38,18 +41,24 @@ class ShareholdingData:
                 ),
                 con=con
             )
-        return pd.Series(date_range).isin(response_df['date_requested'])
+        return pd.Series(pd.date_range(start=start_date, end=end_date)).isin(response_df['date_requested'])
 
     @classmethod
     def scrape_date_stock_data(cls, date: pd.Timestamp, stock_code: int, driver: selenium.webdriver, check_if_exists_in_db: bool = False):
         date_base = date.strftime(DATE_BASE_FORMAT)
         date_hkex = date.strftime(DATE_HKEX_FORMAT)
 
-        # Skip the data scraping step when the given data already exists in the DB
+        # Checking whether to skip
         if check_if_exists_in_db and cls.check_date_stock_data_exists_in_db(date, stock_code):
+            # Skip if already in DB
             logger.info(f'Data for date={date_base}, stock_code={stock_code} already scraped. Skipped.')
             return
-
+        elif stock_code in cls.unavailable_stock_codes:
+            # Skip is stock_code has previously been recorded as unavailable
+            logger.info(f'date={date_base}, stock_code={stock_code} skipped because stock_code is unavailable.')
+            return
+            
+        # Running scraper
         logger.info(f'Scraping data for date={date_base}, stock_code={stock_code}...')
         try:
             # Locate btnSearch element to confirm search dialog has loaded (implicit wait)
@@ -113,6 +122,12 @@ class ShareholdingData:
                 )
                 logger.info(f'Successfully wrote to database for date={date_base}, stock_code={stock_code}')
 
+        except UnexpectedAlertPresentException as e:
+            logger.error(f'date={date_base}, stock_code={stock_code}, {e}')
+            if 'does not exist OR not available for enquiry' in e.msg:
+                cls.unavailable_stock_codes.append(stock_code)
+                logger.info(f'stock_code={stock_code} added to list of unavailable stock codes.')
+
         except BaseException as e:
             logger.error(f'date={date_base}, stock_code={stock_code}, {e}')
 
@@ -121,10 +136,10 @@ class ShareholdingData:
         date_range = pd.date_range(start=start_date, end=end_date)
 
         # Check which dates in date_range already exist in DB
-        date_range_check = cls.check_date_range_stock_data_exists_in_db(date_range, stock_code)
+        date_range_check = cls.check_date_range_stock_data_exists_in_db(start_date, end_date, stock_code)
 
         # Run scraper if not all dates already available in the DB
-        if not cls.check_date_range_stock_data_exists_in_db(date_range, stock_code).all():
+        if not cls.check_date_range_stock_data_exists_in_db(start_date, end_date, stock_code).all():
             with initialise_driver() as driver:
                 for date in date_range[~date_range_check]:
                     cls.scrape_date_stock_data(date, stock_code, driver)
@@ -144,6 +159,7 @@ class ShareholdingData:
     @classmethod
     def prepopulate_shareholding_db(cls):
         if USE_MULTITHREADING:
+            # Distribute stock_code to threads
             with ThreadPoolExecutor(MULTITHREADING_MAX_WORKERS) as executor:
                 executor.map(
                     lambda stock_code: cls.pull_shareholding_data(PREPOPULATE_START_DATE, PREPOPULATE_END_DATE, stock_code),
