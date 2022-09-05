@@ -3,9 +3,11 @@ import pandas as pd
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from utils import *
 from config import *
 from queries import *
+
 
 logger = logging.getLogger(__name__)
 
@@ -109,9 +111,16 @@ class ShareholdingData:
     @classmethod
     def pull_shareholding_data(cls, start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
         # Run data scraper for days which are not already in the DB
-        for date in pd.date_range(start=start_date, end=end_date):
-            cls.scrape_date_stock_data(date, stock_code)
-        
+        if USE_MULTITHREADING:
+            with ThreadPoolExecutor(MULTITHREADING_MAX_WORKERS) as executor:
+                executor.map(
+                    lambda date: cls.scrape_date_stock_data(date, stock_code=stock_code),
+                    pd.date_range(start=start_date, end=end_date)            
+                )
+        else:
+            for date in pd.date_range(start=start_date, end=end_date):
+                cls.scrape_date_stock_data(date, stock_code)
+            
         # Pull from DB as a DataFarme
         with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
             response_df = pd.read_sql(
@@ -128,8 +137,8 @@ class ShareholdingData:
 if __name__ == '__main__':
     # Testing
     data = ShareholdingData.pull_shareholding_data(
-        start_date=pd.Timestamp(year=2022, month=7, day=1),
-        end_date=pd.Timestamp(year=2022, month=7, day=14),
+        start_date=pd.Timestamp(year=2022, month=2, day=1),
+        end_date=pd.Timestamp(year=2022, month=2, day=14),
         stock_code=5
     )
 

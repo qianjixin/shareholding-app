@@ -16,5 +16,8 @@ services:
       - "4444:4444"
     environment:
       - SE_NODE_SESSION_TIMEOUT=20
+      - SE_START_XVFB=false
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+      - SE_NODE_MAX_SESSIONS=5
 volumes:
   app-dev-output:
