@@ -14,5 +14,7 @@ services:
     image: seleniarm/standalone-chromium
     ports:
       - "4444:4444"
+    environment:
+      - SE_NODE_SESSION_TIMEOUT=20
 volumes:
   app-dev-output:

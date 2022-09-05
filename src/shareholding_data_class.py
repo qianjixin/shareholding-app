@@ -1,35 +1,42 @@
+from lib2to3.pytree import Base
 import pandas as pd
 from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import sqlite3
 from utils import *
 from config import *
+from queries import *
 
 logger = logging.getLogger(__name__)
 
 class ShareholdingData:
 
+    initialise_shareholding_db()
+
     @staticmethod
-    def timestamp_to_date_str(timestamp: pd.Timestmap) -> str:
-        return timestamp.strftime('%Y/%m/%d')
+    def check_date_stock_data_exists_in_db(date: pd.Timestamp, stock_code: int):
+        # Returns True when the requested date and stock_code are already in the shareholding table
+        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
+            response_df = pd.read_sql(
+                sql=CHECK_DATE_STOCK_DATA_IN_DB_QUERY.format(
+                    date_requested=date.strftime(DATE_BASE_FORMAT),
+                    stock_code=stock_code
+                ),
+                con=con
+            )
+        return not response_df.empty
 
     @classmethod
-    def date_stock_code_exists_in_db(cls, date: pd.Timestamp, stock_code: int) -> bool:
-        # Function to return whether the data for the date, stock_code combination already exists in the shareholding table
-        date_str = cls.timestamp_to_date_str(date)
-        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as conn:
-            query = f"""
-            SELECT 1 from {SHAREHOLDING_TABLE_NAME}
-            WHERE (date_str='{date_str}') AND (stock_code={stock_code}')
-            LIMIT 1;
-            """
-            response_df = pd.read_sql(query, conn)
-            return (not response_df.empty)
+    def scrape_date_stock_data(cls, date: pd.Timestamp, stock_code: int):
+        date_base = date.strftime(DATE_BASE_FORMAT)
+        date_hkex = date.strftime(DATE_HKEX_FORMAT)
 
-    @classmethod
-    def scrape_ccass_table(cls, date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
-        date_str = cls.timestamp_to_date_str(date)
-        logger.info(f'Scraping data for date={date_str}, stock_code={stock_code}...')
+        # Skip the data scraping step when the given data already exists in the DB
+        if cls.check_date_stock_data_exists_in_db(date, stock_code):
+            logger.info(f'Data for date={date_base}, stock_code={stock_code} already scraped. Skipped.')
+            return
+
+        logger.info(f'Scraping data for date={date_base}, stock_code={stock_code}...')
         try:
             # Initialise Remote WebDriver with context manager
             with initialise_driver() as driver:
@@ -39,30 +46,24 @@ class ShareholdingData:
                 btn_search_element = driver.find_element(By.ID, 'btnSearch')
 
                 # Enter date field
-                shareholding_date_element = driver.find_element(By.ID, 'txtShareholdingDate')
-                driver.execute_script(f'document.getElementById("txtShareholdingDate").setAttribute("value", "{date_str}")')
-                
-                # TODO: Better date validation
-                # Site will auto-correct values that are Sundays or HK public holidays
-                date_str_actual = shareholding_date_element.get_attribute('value')
-                assert date_str == date_str_actual, 'Invalid date entered.'
+                driver.execute_script(f'document.getElementById("txtShareholdingDate").setAttribute("value", "{date_hkex}")')
 
                 # Enter stock code field
-                stock_code_element = driver.find_element(By.ID, 'txtStockCode')
                 driver.execute_script(f'document.getElementById("txtStockCode").setAttribute("value", {stock_code})')
-
-                # TODO: Better stock code validation
-                stock_code_str_actual = stock_code_element.get_attribute('value')
-                assert str(stock_code) == stock_code_str_actual, 'Invalid stock code entered.'
 
                 # Click search button
                 btn_search_element.click()
 
-                # Locate pnlResultNormal (table) element to confirm table has loaded (implicit wait)
-                driver.find_element(By.ID, 'pnlResultNor`mal')
+                # Site will auto-correct back values that are Sundays or HK public holidays
+                shareholding_date_element = driver.find_element(By.ID, 'txtShareholdingDate')
+                date_hkex_displayed = shareholding_date_element.get_attribute('value')
 
-                # Use bs4 to extract table as tag
+                # Locate pnlResultNormal (table) element to confirm table has loaded (implicit wait)
+                driver.find_element(By.ID, 'pnlResultNormal')
+
+                # Use bs4 to parse table
                 soup = BeautifulSoup(driver.page_source, 'html.parser')
+                # Reading detailed shareholding table
                 pnl_result_normal_tag = soup.find('div', id='pnlResultNormal')
 
                 # Remove duplicated header values from rows in table by removing tags
@@ -72,52 +73,47 @@ class ShareholdingData:
                 
                 # Read table from the tag as a data frame
                 df = pd.read_html(str(pnl_result_normal_tag))[0]
+                df = df.rename(columns={
+                        'Participant ID': 'participant_id',
+                        'Name of CCASS Participant(* for Consenting Investor Participants )': 'participant_name',
+                        'Address': 'address',
+                        'Shareholding': 'shareholding',
+                        '% of the total number of Issued Shares/ Warrants/ Units': 'pct_total_issued'
+                    }
+                )
 
-                # TODO: Process column names
+                # Convert pct_total_issued to numeric
+                df['pct_total_issued'] = pd.to_numeric(df['pct_total_issued'].str.rstrip('%'))
 
-                # Append date_str and stock_code as a columns
-                df['date_str'] = date_str
-                df['stock_code'] = stock_code
+                # Append date_requested, date and stock_code as a columns
+                df.insert(0, 'date_requested', date_base),
+                df.insert(1, 'date', pd.Timestamp(date_hkex_displayed).strftime(DATE_BASE_FORMAT))
+                df.insert(2, 'stock_code', stock_code)
+
+                # Verify columns before writing to database
+                assert list(df.columns) == ['date_requested', 'date', 'stock_code', 'participant_id', 'participant_name', 'address', 'shareholding', 'pct_total_issued']
 
                 # Write to shareholding database table
-                with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as conn:
+                with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
                     df.to_sql(
-                        name=SHAREHOLDING_TABLE_NAME,
-                        con=conn,
+                        name='shareholding',
+                        con=con,
                         if_exists='append',
                         index=False
                     )
-                    logger.info(f'Successfully wrote to database for date={date_str}, stock_code={stock_code}')
+                    logger.info(f'Successfully wrote to database for date={date_base}, stock_code={stock_code}')
 
         except BaseException as e:
-            logger.error(f'date={date}, stock_code={stock_code}, {e}')
-
-    @classmethod
-    def get_stock_shareholding_data(cls, start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
-        # Given a stock_code, returns shareholding data for dates between start_date and end_date
-        date_range = pd.date_range(start_date, end_date)
-
-        # 1. Scrape data for dates where data doesn't already exist in the database
-        for date in date_range:
-            if not cls.date_stock_code_exists_in_db(date, stock_code):
-                cls.scrape_ccass_table(date, stock_code)
-
-        # 2. Pull from shareholding database
-        date_str_range_array = [cls.timestamp_to_date_str(date) for date in date_range]
-        date_str_range_array_str = str(tuple(date_str_range_array))
-        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as conn:
-            query = f"""
-            SELECT * FROM {SHAREHOLDING_TABLE_NAME}
-            WHERE date_str in {date_str_range_array_str};
-            """
-            return pd.read_sql(query, conn)
+            logger.error(f'date={date_base}, stock_code={stock_code}, {e}')
 
 
 if __name__ == '__main__':
-    df = ShareholdingData.get_stock_shareholding_data(
-        start_date=pd.Timestamp(year=2022, month=8, day=1),
-        end_date=pd.Timestamp(year=2022, month=8, day=14),
-        stock_code=10
-    )
+    # Testing
+    stock_code=5
+    for date in pd.date_range(start='2022-08-01', end='2022-08-14'):
+        ShareholdingData.scrape_date_stock_data(
+            date=date,
+            stock_code=stock_code
+        )
 
     logger.info('All done.')
