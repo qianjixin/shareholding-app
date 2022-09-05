@@ -16,8 +16,8 @@ class ShareholdingData:
     initialise_shareholding_db()
 
     @staticmethod
-    def check_date_stock_data_exists_in_db(date: pd.Timestamp, stock_code: int):
-        # Returns True when the requested date and stock_code are already in the shareholding table
+    def check_date_stock_data_exists_in_db(date: pd.Timestamp, stock_code: int) -> bool:
+        # Returns True when the requested date and stock_code already exist in the DB
         with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
             response_df = pd.read_sql(
                 sql=CHECK_DATE_STOCK_DATA_IN_DB_QUERY.format(
@@ -28,13 +28,25 @@ class ShareholdingData:
             )
         return not response_df.empty
 
+    @staticmethod
+    def check_date_range_stock_data_exists_in_db(date_range: pd.DatetimeIndex, stock_code: int) -> pd.Series:
+        # For a given date_range and stock_code, returns whether each date already exists in the DB
+        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
+            response_df = pd.read_sql(
+                sql=CHECK_DATE_RANGE_STOCK_DATA_IN_DB_QUERY.format(
+                    stock_code=stock_code
+                ),
+                con=con
+            )
+        return pd.Series(date_range).isin(response_df['date_requested'])
+
     @classmethod
-    def scrape_date_stock_data(cls, date: pd.Timestamp, stock_code: int, driver: selenium.webdriver):
+    def scrape_date_stock_data(cls, date: pd.Timestamp, stock_code: int, driver: selenium.webdriver, check_if_exists_in_db: bool = False):
         date_base = date.strftime(DATE_BASE_FORMAT)
         date_hkex = date.strftime(DATE_HKEX_FORMAT)
 
         # Skip the data scraping step when the given data already exists in the DB
-        if cls.check_date_stock_data_exists_in_db(date, stock_code):
+        if check_if_exists_in_db and cls.check_date_stock_data_exists_in_db(date, stock_code):
             logger.info(f'Data for date={date_base}, stock_code={stock_code} already scraped. Skipped.')
             return
 
@@ -106,10 +118,16 @@ class ShareholdingData:
 
     @classmethod
     def pull_shareholding_data(cls, start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
-        # Run data scraper for days which are not already in the DB
-        with initialise_driver() as driver:
-            for date in pd.date_range(start=start_date, end=end_date):
-                cls.scrape_date_stock_data(date, stock_code, driver)
+        date_range = pd.date_range(start=start_date, end=end_date)
+
+        # Check which dates in date_range already exist in DB
+        date_range_check = cls.check_date_range_stock_data_exists_in_db(date_range, stock_code)
+
+        # Run scraper if not all dates already available in the DB
+        if not cls.check_date_range_stock_data_exists_in_db(date_range, stock_code).all():
+            with initialise_driver() as driver:
+                for date in date_range[~date_range_check]:
+                    cls.scrape_date_stock_data(date, stock_code, driver)
             
         # Pull from DB as a DataFarme
         with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:

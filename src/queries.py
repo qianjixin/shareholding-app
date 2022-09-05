@@ -19,6 +19,11 @@ WHERE (date_requested = '{date_requested}') AND (stock_code={stock_code})
 LIMIT 1;
 """
 
+CHECK_DATE_RANGE_STOCK_DATA_IN_DB_QUERY = """
+SELECT DISTINCT date_requested FROM shareholding
+WHERE stock_code={stock_code};
+"""
+
 PULL_SHAREHOLDING_DATA_QUERY = """
 SELECT * FROM shareholding
 WHERE date_requested >= '{start_date}'
