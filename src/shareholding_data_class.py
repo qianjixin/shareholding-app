@@ -106,14 +106,31 @@ class ShareholdingData:
         except BaseException as e:
             logger.error(f'date={date_base}, stock_code={stock_code}, {e}')
 
+    @classmethod
+    def pull_shareholding_data(cls, start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int) -> pd.DataFrame:
+        # Run data scraper for days which are not already in the DB
+        for date in pd.date_range(start=start_date, end=end_date):
+            cls.scrape_date_stock_data(date, stock_code)
+        
+        # Pull from DB as a DataFarme
+        with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
+            response_df = pd.read_sql(
+                sql=PULL_SHAREHOLDING_DATA_QUERY.format(
+                    start_date=start_date.strftime(DATE_BASE_FORMAT),
+                    end_date=end_date.strftime(DATE_BASE_FORMAT),
+                    stock_code=stock_code
+                ),
+                con=con
+            )
+        return response_df
+    
 
 if __name__ == '__main__':
     # Testing
-    stock_code=5
-    for date in pd.date_range(start='2022-08-01', end='2022-08-14'):
-        ShareholdingData.scrape_date_stock_data(
-            date=date,
-            stock_code=stock_code
-        )
+    data = ShareholdingData.pull_shareholding_data(
+        start_date=pd.Timestamp(year=2022, month=7, day=1),
+        end_date=pd.Timestamp(year=2022, month=7, day=14),
+        stock_code=5
+    )
 
     logger.info('All done.')
