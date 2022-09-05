@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS shareholding (
     date TEXT,
     stock_code INTEGER,
     participant_id TEXT,
+    participant_name TEXT,
     address TEXT,
     shareholding INTEGER,
     pct_total_issued REAL

@@ -18,6 +18,7 @@ def initialise_driver():
         driver = webdriver.Chrome(options=options)
         
     driver.implicitly_wait(IMPLICIT_WAIT_SECONDS)
+    driver.get(CCASS_SHAREHOLDING_SEARCH_URL)
     return driver
 
 
