@@ -6,7 +6,7 @@ import plotly.graph_objs as go
 from dash import Input, Output, State, dcc, html, dash_table
 from config import *
 from utils import get_table_type
-from shareholding_display_class import ShareholdingDisplay
+from shareholding_display import ShareholdingDisplay
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -20,7 +20,7 @@ controls = dbc.Card(
                     type='number',
                     min=1,
                     step=1,
-                    value=5,
+                    value=8,
                 ),
             ]
         ),

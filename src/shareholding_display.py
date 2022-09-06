@@ -1,6 +1,5 @@
 import pandas as pd
-from shareholding_data_class import ShareholdingData
-from dash import dcc, dash_table
+from shareholding_data import ShareholdingData
 import plotly.express as px
 from config import *
 from utils import *

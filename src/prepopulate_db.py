@@ -1,4 +1,4 @@
-from shareholding_data_class import ShareholdingData
+from shareholding_data import ShareholdingData
 from concurrent.futures import ThreadPoolExecutor
 from config import *
 
