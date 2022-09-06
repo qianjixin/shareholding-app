@@ -12,10 +12,13 @@ from queries import *
 
 logger = logging.getLogger(__name__)
 
+
 class ShareholdingData:
 
+    # Initialise the shareholding database and table
     initialise_shareholding_db()
 
+    # Initialise ephemeral record of invalid stock codes to save time when scraping data
     unavailable_stock_codes = []
 
     @staticmethod
@@ -51,34 +54,43 @@ class ShareholdingData:
         # Checking whether to skip
         if check_if_exists_in_db and cls.check_date_stock_data_exists_in_db(date, stock_code):
             # Skip if already in DB
-            logger.info(f'Data for date={date_base}, stock_code={stock_code} already scraped. Skipped.')
+            logger.info(
+                f'Data for date={date_base}, stock_code={stock_code} already scraped. Skipped.')
             return
         elif stock_code in cls.unavailable_stock_codes:
             # Skip is stock_code has previously been recorded as unavailable
-            logger.info(f'date={date_base}, stock_code={stock_code} skipped because stock_code is unavailable.')
+            logger.info(
+                f'date={date_base}, stock_code={stock_code} skipped because stock_code is unavailable.')
             return
-            
+
         # Running scraper
-        logger.info(f'Scraping data for date={date_base}, stock_code={stock_code}...')
+        logger.info(
+            f'Scraping data for date={date_base}, stock_code={stock_code}...')
         try:
             # Locate btnSearch element to confirm search dialog has loaded (implicit wait)
             btn_search_element = driver.find_element(By.ID, 'btnSearch')
 
             # Enter date field
-            driver.execute_script(f'document.getElementById("txtShareholdingDate").setAttribute("value", "{date_hkex}")')
+            driver.execute_script(
+                f'document.getElementById("txtShareholdingDate").setAttribute("value", "{date_hkex}")')
 
             # Enter stock code field
-            driver.execute_script(f'document.getElementById("txtStockCode").setAttribute("value", {stock_code})')
+            driver.execute_script(
+                f'document.getElementById("txtStockCode").setAttribute("value", {stock_code})')
 
             # Click search button
             btn_search_element.click()
 
-            # Site will auto-correct back values that are Sundays or HK public holidays
-            shareholding_date_element = driver.find_element(By.ID, 'txtShareholdingDate')
-            date_hkex_displayed = shareholding_date_element.get_attribute('value')
-
             # Locate pnlResultNormal (table) element to confirm table has loaded (implicit wait)
             driver.find_element(By.ID, 'pnlResultNormal')
+
+            # Site will auto-correct back values that are Sundays or HK public holidays
+            shareholding_date_element = driver.find_element(
+                By.ID, 'txtShareholdingDate')
+            date_hkex_displayed = shareholding_date_element.get_attribute('value')
+
+            # Get stock_name
+            stock_name = driver.find_element(By.ID, 'txtStockName').get_attribute('value')
 
             # Use bs4 to parse table
             soup = BeautifulSoup(driver.page_source, 'html.parser')
@@ -86,31 +98,37 @@ class ShareholdingData:
             pnl_result_normal_tag = soup.find('div', id='pnlResultNormal')
 
             # Remove duplicated header values from rows in table by removing tags
-            mobile_list_heading_tag_list = pnl_result_normal_tag.find_all('div', class_='mobile-list-heading')
+            mobile_list_heading_tag_list = pnl_result_normal_tag.find_all(
+                'div', class_='mobile-list-heading')
             for element in mobile_list_heading_tag_list:
                 element.decompose()
-            
+
             # Read table from the tag as a data frame
             df = pd.read_html(str(pnl_result_normal_tag))[0]
+
             df = df.rename(columns={
-                    'Participant ID': 'participant_id',
-                    'Name of CCASS Participant(* for Consenting Investor Participants )': 'participant_name',
-                    'Address': 'address',
-                    'Shareholding': 'shareholding',
-                    '% of the total number of Issued Shares/ Warrants/ Units': 'pct_total_issued'
-                }
+                'Participant ID': 'participant_id',
+                'Name of CCASS Participant(* for Consenting Investor Participants )': 'participant_name',
+                'Shareholding': 'shareholding',
+                '% of the total number of Issued Shares/ Warrants/ Units': 'pct_total_issued'
+            }
             )
+            df = df[['participant_id', 'participant_name',
+                     'shareholding', 'pct_total_issued']]
 
             # Convert pct_total_issued to numeric
-            df['pct_total_issued'] = pd.to_numeric(df['pct_total_issued'].str.rstrip('%'))
+            df['pct_total_issued'] = pd.to_numeric(
+                df['pct_total_issued'].str.rstrip('%'))
 
             # Append date_requested, date and stock_code as a columns
             df.insert(0, 'date_requested', date_base),
-            df.insert(1, 'date', pd.Timestamp(date_hkex_displayed).strftime(DATE_BASE_FORMAT))
+            df.insert(1, 'date', pd.Timestamp(
+                date_hkex_displayed).strftime(DATE_BASE_FORMAT))
             df.insert(2, 'stock_code', stock_code)
+            df.insert(3, 'stock_name', stock_name)
 
             # Verify columns before writing to database
-            assert list(df.columns) == ['date_requested', 'date', 'stock_code', 'participant_id', 'participant_name', 'address', 'shareholding', 'pct_total_issued']
+            assert list(df.columns) == ['date_requested', 'date', 'stock_code', 'stock_name', 'participant_id', 'participant_name', 'shareholding', 'pct_total_issued'], 'Columns do not match schema'
 
             # Write to shareholding database table
             with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
@@ -120,13 +138,15 @@ class ShareholdingData:
                     if_exists='append',
                     index=False
                 )
-                logger.info(f'Successfully wrote to database for date={date_base}, stock_code={stock_code}')
+                logger.info(
+                    f'date={date_base}, stock_code={stock_code}, successfully written to database.')
 
         except UnexpectedAlertPresentException as e:
             logger.error(f'date={date_base}, stock_code={stock_code}, {e}')
             if 'does not exist OR not available for enquiry' in e.msg:
                 cls.unavailable_stock_codes.append(stock_code)
-                logger.info(f'stock_code={stock_code} added to list of unavailable stock codes.')
+                logger.info(
+                    f'stock_code={stock_code} added to list of unavailable stock codes.')
 
         except BaseException as e:
             logger.error(f'date={date_base}, stock_code={stock_code}, {e}')
@@ -136,14 +156,15 @@ class ShareholdingData:
         date_range = pd.date_range(start=start_date, end=end_date)
 
         # Check which dates in date_range already exist in DB
-        date_range_check = cls.check_date_range_stock_data_exists_in_db(start_date, end_date, stock_code)
+        date_range_check = cls.check_date_range_stock_data_exists_in_db(
+            start_date, end_date, stock_code)
 
         # Run scraper if not all dates already available in the DB
         if not cls.check_date_range_stock_data_exists_in_db(start_date, end_date, stock_code).all():
             with initialise_driver() as driver:
                 for date in date_range[~date_range_check]:
                     cls.scrape_date_stock_data(date, stock_code, driver)
-            
+
         # Pull from DB as a DataFarme
         with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
             response_df = pd.read_sql(
@@ -155,16 +176,18 @@ class ShareholdingData:
                 con=con
             )
         return response_df
-    
+
     @classmethod
     def prepopulate_shareholding_db(cls):
         if USE_MULTITHREADING:
             # Distribute stock_code to threads
             with ThreadPoolExecutor(MULTITHREADING_MAX_WORKERS) as executor:
                 executor.map(
-                    lambda stock_code: cls.pull_shareholding_data(PREPOPULATE_START_DATE, PREPOPULATE_END_DATE, stock_code),
+                    lambda stock_code: cls.pull_shareholding_data(
+                        PREPOPULATE_START_DATE, PREPOPULATE_END_DATE, stock_code),
                     PREPOLUATE_STOCK_CODE_RANGE
                 )
         else:
             for stock_code in PREPOLUATE_STOCK_CODE_RANGE:
-                cls.pull_shareholding_data(PREPOPULATE_START_DATE, PREPOPULATE_END_DATE, stock_code)
+                cls.pull_shareholding_data(
+                    PREPOPULATE_START_DATE, PREPOPULATE_END_DATE, stock_code)

@@ -5,9 +5,9 @@ CREATE TABLE IF NOT EXISTS shareholding (
     date_requested TEXT,
     date TEXT,
     stock_code INTEGER,
+    stock_name TEXT,
     participant_id TEXT,
     participant_name TEXT,
-    address TEXT,
     shareholding INTEGER,
     pct_total_issued REAL
 );
