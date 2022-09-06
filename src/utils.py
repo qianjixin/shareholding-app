@@ -1,9 +1,10 @@
+import selenium
 from selenium import webdriver
 import sqlite3
 from queries import *
 from config import *
 
-def initialise_driver():
+def initialise_driver() -> selenium.webdriver:
     # Initialises a remote Chrome webdriver session
     options = webdriver.ChromeOptions()
     options.add_argument('--ignore-ssl-errors=yes')

@@ -11,5 +11,8 @@ Run the following command in the project directory (`shareholding-app`)
 
 `docker compose up`
 
+## Issues
+- The AWS `t2-micro` instance type lacks the performance to efficiently run the Selenium data scraper. This may cause freezing or slowness when requesting data that hasn't already been stored in the database.
+
 ## Remarks
 Development was done on a machine with an Apple M1 processor, so the development environment specified in `docker-compose-env.yml` using an experimental `seleniarm/standalone-chromium` Docker image for the standalone Selenium Grid instance.

@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 # Selenium config
-USE_REMOTE_WEBDRIVER = True
+USE_REMOTE_WEBDRIVER = False
 REMOTE_WEBDRIVER_COMMAND_EXECUTOR_URL = 'http://selenium:4444/wd/hub'
 HEADLESS = True
 IMPLICIT_WAIT_SECONDS = 5
@@ -35,8 +35,8 @@ DASH_DEBUG_MODE = False
 DASH_PORT = 8887
 
 # prepopulate_db options
-PREPOPULATE_START_DATE = pd.Timestamp(year=2021, month=9, day=4)
-PREPOPULATE_END_DATE = pd.Timestamp(year=2022, month=9, day=3)
-PREPOLUATE_STOCK_CODE_RANGE = np.arange(1, 95500)
+PREPOPULATE_START_DATE = pd.Timestamp(year=2021, month=9, day=5)
+PREPOPULATE_END_DATE = pd.Timestamp(year=2022, month=9, day=6)
+PREPOPULATE_STOCK_CODE_RANGE = np.arange(1, 95500)
 USE_MULTITHREADING = True
-MULTITHREADING_MAX_WORKERS = 5
+MULTITHREADING_MAX_WORKERS = 20

@@ -10,8 +10,22 @@ logger = logging.getLogger(__name__)
 
 
 class ShareholdingDisplay(ShareholdingData):
+    """ Builds figures and tables for display in the Dash application.
+
+    Retrieves data from the local SQLite database containing the scraped shareholding data.
+
+    """
 
     def __init__(self, start_date: pd.Timestamp, end_date: pd.Timestamp, stock_code: int, threshold_percentage: float) -> None:
+        """ Initialises an instance for a given set of inputs from the Dash application.
+
+        Args:
+            start_date (pd.Timestamp): Start of the date range.
+            end_date (pd.Timestamp): End of the date range.
+            stock_code (int): HKEX stock code.
+            threshold_percentage (float): Threshold for detecting possible transactions.
+
+        """
         self.start_date = start_date
         self.end_date = end_date
         self.stock_code = stock_code
@@ -28,6 +42,14 @@ class ShareholdingDisplay(ShareholdingData):
         self.data = data
 
     def generate_trend_tab_data(self) -> dict:
+        """ Generates items for display in the 'Trend Plot' tab.
+
+        Uses a serialisable dictionary for return in order store data in a dcc.Store element.
+
+        Returns:
+            dict: A dictionary containing a Plotly line plot figure and a DataFrame in dictionary format.
+
+        """
         # Identify top 10 participants as of the end_date
         data_end_date = self.data.loc[self.data['date'].eq(
             self.data['date'].max())].reset_index(drop=True).copy(deep=True)
@@ -64,6 +86,14 @@ class ShareholdingDisplay(ShareholdingData):
         }
 
     def generate_finder_tab_data(self) -> dict:
+        """ Generates items for display in the 'Transaction Finder' tab.
+
+        Uses a serialisable dictionary for return in order store data in a dcc.Store element.
+
+        Returns:
+            dict: A dictionary containing a DataFrame in dictionary format.
+
+        """
         threshold_proportion = self.threshold_percentage / 100
 
         # Identify transactions as a shareholding_pct_change >= threshold_proportion
