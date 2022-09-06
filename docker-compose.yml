@@ -10,9 +10,14 @@ services:
       - app-output:/app/output
     ports:
       - "8888:8888"
+    restart: always
   selenium:
     image: selenium/standalone-chrome
     ports:
       - "4444:4444"
+    environment:
+      - SE_NODE_SESSION_TIMEOUT=20
+      - SE_START_XVFB=false
+    restart: always
 volumes:
   app-output:

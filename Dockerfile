@@ -3,4 +3,5 @@ FROM python:3.10-slim-bullseye
 WORKDIR /app
 COPY . .
 RUN pip3 install -r requirements.txt
-CMD echo Hello World!
+WORKDIR /app/src
+CMD ["python" "app.py"]

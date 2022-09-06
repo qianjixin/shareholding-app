@@ -10,6 +10,7 @@ services:
       - app-dev-output:/app-dev/output
     ports:
       - "8888:8888"
+    restart: always
   selenium:
     image: seleniarm/standalone-chromium
     ports:
@@ -19,5 +20,6 @@ services:
       - SE_START_XVFB=false
       - SE_NODE_OVERRIDE_MAX_SESSIONS=true
       - SE_NODE_MAX_SESSIONS=5
+    restart: always
 volumes:
   app-dev-output:
