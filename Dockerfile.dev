@@ -4,4 +4,4 @@ WORKDIR /app-dev
 COPY . .
 RUN pip3 install -r requirements.txt
 WORKDIR /app-dev/src
-CMD ["python" "app.py"]
+CMD ["python", "app.py"]
