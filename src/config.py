@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 # Selenium config
-USE_REMOTE_WEBDRIVER = False
+USE_REMOTE_WEBDRIVER = True
 REMOTE_WEBDRIVER_COMMAND_EXECUTOR_URL = 'http://selenium:4444/wd/hub'
 HEADLESS = True
 IMPLICIT_WAIT_SECONDS = 5
