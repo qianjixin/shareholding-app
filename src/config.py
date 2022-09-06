@@ -32,7 +32,7 @@ SHAREHOLDING_DATA_DB_PATH = f'{OUTPUT_DIR_PATH}/shareholding.db'
 # Dash
 DASH_HOST = '0.0.0.0'
 DASH_DEBUG_MODE = False
-DASH_PORT = 8887
+DASH_PORT = 8888
 
 # prepopulate_db options
 PREPOPULATE_START_DATE = pd.Timestamp(year=2021, month=9, day=4)
