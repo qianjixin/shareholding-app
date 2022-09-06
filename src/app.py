@@ -158,4 +158,4 @@ def render_tab_content(active_tab, store):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=DASH_DEBUG_MODE, port=DASH_PORT)
+    app.run_server(host=DASH_HOST, debug=DASH_DEBUG_MODE, port=DASH_PORT)

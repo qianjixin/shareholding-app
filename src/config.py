@@ -30,6 +30,7 @@ DATE_BASE_FORMAT = '%Y-%m-%d'
 SHAREHOLDING_DATA_DB_PATH = f'{OUTPUT_DIR_PATH}/shareholding.db'
 
 # Dash
+DASH_HOST = '0.0.0.0'
 DASH_DEBUG_MODE = False
 DASH_PORT = 8888
 
