@@ -18,7 +18,7 @@ class ShareholdingData:
     # Initialise the shareholding database and table
     initialise_shareholding_db()
 
-    # Initialise ephemeral record of invalid stock codes to save time when scraping data
+    # Initialise ephemeral list to store unavailable stock_code values to speed up scraper
     unavailable_stock_codes = []
 
     @staticmethod

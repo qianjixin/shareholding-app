@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 
 # Selenium config
-USE_REMOTE_WEBDRIVER = False
+USE_REMOTE_WEBDRIVER = True
 REMOTE_WEBDRIVER_COMMAND_EXECUTOR_URL = 'http://selenium:4444/wd/hub'
 HEADLESS = True
 IMPLICIT_WAIT_SECONDS = 5
@@ -27,16 +27,15 @@ DATE_HKEX_FORMAT = '%Y/%m/%d'
 DATE_BASE_FORMAT = '%Y-%m-%d'
 
 # SQLite3
-SHAREHOLDING_DATA_DB_PATH = '../output/shareholding.db'
+SHAREHOLDING_DATA_DB_PATH = f'{OUTPUT_DIR_PATH}/shareholding.db'
 
 # Dash
-DASH_DEBUG_MODE = True
+DASH_DEBUG_MODE = False
 DASH_PORT = 8888
 
-# Prepoluate shareholding_db
-PREPOPULATE_DB = True
+# prepopulate_db options
 PREPOPULATE_START_DATE = pd.Timestamp(year=2021, month=9, day=4)
 PREPOPULATE_END_DATE = pd.Timestamp(year=2022, month=9, day=3)
 PREPOLUATE_STOCK_CODE_RANGE = np.arange(1, 95500)
 USE_MULTITHREADING = True
-MULTITHREADING_MAX_WORKERS = 50
+MULTITHREADING_MAX_WORKERS = 5

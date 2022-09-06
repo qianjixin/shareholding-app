@@ -20,6 +20,7 @@ class ShareholdingDisplay(ShareholdingData):
         # Pull and pre-process shareholding data
         data = self.pull_shareholding_data(start_date, end_date, stock_code)
         data = data.drop(columns='date_requested')
+        data = data.sort_values(by=['date', 'participant_id'], ascending=True)
         data = data.drop_duplicates(
             subset=['date', 'stock_code', 'participant_id'])
         data['participant'] = data['participant_id'] + \
@@ -59,7 +60,7 @@ class ShareholdingDisplay(ShareholdingData):
 
         return {
             'trend_fig': trend_fig,
-            'trend_data_records': trend_data.to_records()
+            'trend_data_dict': trend_data.to_dict()
         }
 
     def generate_finder_tab_data(self) -> dict:
@@ -87,8 +88,8 @@ class ShareholdingDisplay(ShareholdingData):
                         'seller_id' : seller_row['participant_id'],
                         'seller_name': seller_row['participant_name'],
                         'quantity': buyer_row['shareholding_diff'],
-                        'buyer_pct_change': buyer_row['shareholding_pct_change'],
-                        'seller_pct_change': seller_row['shareholding_diff'],
+                        'buyer_pct_change': np.round(100 * buyer_row['shareholding_pct_change'], 5),
+                        'seller_pct_change': np.round(100 * buyer_row['shareholding_pct_change'], 5),
                         'buyer_shareholding': buyer_row['shareholding'],
                         'seller_shareholding': seller_row['shareholding']
                     }
@@ -97,5 +98,5 @@ class ShareholdingDisplay(ShareholdingData):
         potential_transactions = pd.DataFrame(potential_transactions_concat_list)
 
         return {
-            'potential_transactions_records': potential_transactions.to_records()
+            'potential_transactions_dict': potential_transactions.to_dict()
         }

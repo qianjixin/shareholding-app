@@ -27,3 +27,23 @@ def initialise_shareholding_db():
     with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
         cur = con.cursor()
         cur.execute(CREATE_SHAREHOLDING_TABLE_QUERY)
+
+
+def get_table_type(df_column: pd.Series) -> str:
+    # Get column type for Dash DataTable
+    if isinstance(df_column.dtype, pd.DatetimeTZDtype):
+        return 'datetime',
+    elif (isinstance(df_column.dtype, pd.StringDtype) or
+            isinstance(df_column.dtype, pd.BooleanDtype) or
+            isinstance(df_column.dtype, pd.CategoricalDtype) or
+            isinstance(df_column.dtype, pd.PeriodDtype)):
+        return 'text'
+    elif (isinstance(df_column.dtype, pd.SparseDtype) or
+            isinstance(df_column.dtype, pd.IntervalDtype) or
+            isinstance(df_column.dtype, pd.Int8Dtype) or
+            isinstance(df_column.dtype, pd.Int16Dtype) or
+            isinstance(df_column.dtype, pd.Int32Dtype) or
+            isinstance(df_column.dtype, pd.Int64Dtype)):
+        return 'numeric'
+    else:
+        return 'any'
