@@ -59,6 +59,7 @@ controls = dbc.Card(
     body=True,
 )
 
+app.title = 'HKEX CCASS Shareholding Dashboard'
 app.layout = dbc.Container(
     [
         dcc.Store(id='store'),
@@ -137,8 +138,6 @@ def render_tab_content(active_tab: str, store: dict) -> list:
         list: List of elements to be displayed in the 'tab-content' div.
 
     """
-
-
     if store is not None:
         if active_tab == 'trend-tab':
             # Trend Plot Tab
