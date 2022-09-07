@@ -3,4 +3,4 @@
 BASEDIR=$(dirname $0)
 cd $BASEDIR/src
 
-python app.py
+while :; do python app.py; sleep 5; done
