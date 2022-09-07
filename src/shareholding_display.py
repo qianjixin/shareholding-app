@@ -104,7 +104,7 @@ class ShareholdingDisplay(ShareholdingData):
         # Detect transaction parties
         # For each day, find parties with inverse changes
         potential_transactions_concat_list = []
-        for _, date_df in finder_data.groupby('date'):
+        for _, date_df in finder_data.loc[finder_data['transaction_detected']].groupby('date'):
             # Loop through net buyers
             for _, buyer_row in date_df.loc[date_df['shareholding_diff'].gt(0)].iterrows():
                 # Loop through net sellers with the opposite shareholding_diff
