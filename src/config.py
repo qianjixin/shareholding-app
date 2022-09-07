@@ -16,10 +16,10 @@ logging.basicConfig(
 )
 
 # Selenium config
-USE_REMOTE_WEBDRIVER = True
+USE_REMOTE_WEBDRIVER = False
 REMOTE_WEBDRIVER_COMMAND_EXECUTOR_URL = 'http://selenium:4444/wd/hub'
 HEADLESS = True
-IMPLICIT_WAIT_SECONDS = 5
+IMPLICIT_WAIT_SECONDS = 30
 
 # Constants
 CCASS_SHAREHOLDING_SEARCH_URL = 'https://www3.hkexnews.hk/sdw/search/searchsdw.aspx'

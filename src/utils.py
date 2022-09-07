@@ -10,6 +10,7 @@ def initialise_driver() -> selenium.webdriver:
     options.add_argument('--ignore-ssl-errors=yes')
     options.add_argument('--ignore-certificate-errors')
     options.add_argument('--start-maximized')
+    options.add_argument('--whitelisted-ips=""')
     if HEADLESS:
         options.add_argument('--headless')
 
