@@ -34,7 +34,7 @@ controls = dbc.Card(
                     max_date_allowed=(pd.Timestamp.now() -
                                       pd.Timedelta(days=1)).date(),
                     start_date=(pd.Timestamp.now() -
-                                pd.Timedelta(days=4)).date(),
+                                pd.Timedelta(days=8)).date(),
                     end_date=(pd.Timestamp.now() -
                               pd.Timedelta(days=1)).date(),
                     display_format='D-M-Y'
@@ -168,6 +168,7 @@ def render_tab_content(active_tab: str, store: dict) -> list:
                 store['finder_tab_data']['potential_transactions_dict'])
 
             finder_tab_content = [
+                html.P('The table below identifies potential transactions between parties with corresponding changes in shareholding.'),
                 html.Div(
                     dash_table.DataTable(
                         columns=[

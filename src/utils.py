@@ -29,6 +29,7 @@ def initialise_shareholding_db():
     with sqlite3.connect(SHAREHOLDING_DATA_DB_PATH) as con:
         cur = con.cursor()
         cur.execute(CREATE_SHAREHOLDING_TABLE_QUERY)
+        cur.execute(CREATE_SHAREHOLDING_INDEX_QUERY)
 
 
 def get_table_type(df_column: pd.Series) -> str:

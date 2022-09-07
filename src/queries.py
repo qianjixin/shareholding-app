@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS shareholding (
 );
 """
 
+CREATE_SHAREHOLDING_INDEX_QUERY = """
+CREATE INDEX IF NOT EXISTS shareholding_idx ON shareholding (date_requested, date, stock_code)
+"""
+
+
 CHECK_DATE_STOCK_DATA_IN_DB_QUERY = """
 SELECT 1 FROM shareholding
 WHERE (date_requested = '{date_requested}') AND (stock_code={stock_code})

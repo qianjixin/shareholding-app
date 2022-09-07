@@ -35,7 +35,7 @@ DASH_DEBUG_MODE = False
 DASH_PORT = 8887
 
 # prepopulate_db options
-PREPOPULATE_START_DATE = pd.Timestamp(year=2021, month=9, day=5)
+PREPOPULATE_START_DATE = pd.Timestamp(year=2021, month=8, day=6)
 PREPOPULATE_END_DATE = pd.Timestamp(year=2022, month=9, day=6)
 PREPOPULATE_STOCK_CODE_RANGE = np.arange(1, 95500)
 USE_MULTITHREADING = False
