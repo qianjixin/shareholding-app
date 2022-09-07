@@ -167,18 +167,21 @@ def render_tab_content(active_tab: str, store: dict) -> list:
             potential_transactions = pd.DataFrame.from_dict(
                 store['finder_tab_data']['potential_transactions_dict'])
 
-            finder_tab_content = [
-                html.P('The table below identifies potential transactions between parties with corresponding changes in shareholding.'),
-                html.Div(
-                    dash_table.DataTable(
-                        columns=[
-                            {'name': i, 'id': i, 'type': get_table_type(potential_transactions[i])} for i in potential_transactions.columns
-                        ],
-                        data=potential_transactions.to_dict('records'),
-                        filter_action='native'
+            if potential_transactions.empty:
+                return 'No transactions detected.'
+            else:
+                finder_tab_content = [
+                    html.P('The table below identifies potential transactions between parties with corresponding changes in shareholding.'),
+                    html.Div(
+                        dash_table.DataTable(
+                            columns=[
+                                {'name': i, 'id': i, 'type': get_table_type(potential_transactions[i])} for i in potential_transactions.columns
+                            ],
+                            data=potential_transactions.to_dict('records'),
+                            filter_action='native'
+                        )
                     )
-                )
-            ]
+                ]
             return finder_tab_content
     else:
         return 'Data not available. Please check stock code.'
